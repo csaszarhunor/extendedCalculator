@@ -5,6 +5,7 @@
 var keys = document.querySelectorAll('#calculator span');
 var operators = ['+', '-', 'x', '÷'];
 var decimalAdded = false;
+var info = document.querySelector('#info');
 
 // Add onclick event to all the keys and perform operations
 for(var i = 0; i < keys.length; i++) {
@@ -33,8 +34,12 @@ for(var i = 0; i < keys.length; i++) {
             if(operators.indexOf(lastChar) > -1 || lastChar == '.')
                 equation = equation.replace(/.$/, '');
 
-            if(equation)
-                input.innerHTML = eval(equation);
+            if(equation){
+                var result = eval(equation);
+                input.innerHTML = result;
+                info.innerHTML = "loading...";
+                displayInfo(info, result);
+            }
 
             decimalAdded = false;
         }
@@ -86,3 +91,42 @@ for(var i = 0; i < keys.length; i++) {
         e.preventDefault();
     }
 }
+
+var displayInfo= function(htmlElement, content){
+    var numberStr = content.toString();
+    var url = constructUrl();
+
+    function constructUrl(){
+        var urlBase = "http://numbersapi.com/";
+        for (var index in numberStr){
+            if(numberStr.hasOwnProperty(index) && numberStr[index] != ".")
+                urlBase += numberStr[index] + ",";
+        }
+        return urlBase.substr(0, urlBase.length - 1);
+    }
+
+    var request = new XMLHttpRequest();
+    request.onreadystatechange = onReady;
+    request.open('GET', url, true);
+    request.send();
+
+    function onReady() {
+        if (request.readyState == 4) {
+            var response = request.responseText;
+
+            // if the number was more than one digit long, numbersAPI returns a JSON object which needs further editing
+            if (numberStr.length == 1)
+                htmlElement.innerHTML = response;
+            else if (numberStr.length > 1){
+                var JSONinfos = JSON.parse(response);
+                var numberInfo = "";
+                for (var info in JSONinfos){
+                    if (JSONinfos.hasOwnProperty(info)){
+                        numberInfo += JSONinfos[info] + " ";
+                    }
+                }
+                htmlElement.innerHTML = numberInfo;
+            }
+        }
+    }
+};
