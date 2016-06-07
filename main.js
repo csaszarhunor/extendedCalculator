@@ -6,6 +6,7 @@ var keys = document.querySelectorAll('#calculator span');
 var operators = ['+', '-', 'x', '÷'];
 var decimalAdded = false;
 var info = document.querySelector('#info');
+var storage = localStorage;
 
 // Add onclick event to all the keys and perform operations
 for(var i = 0; i < keys.length; i++) {
@@ -92,19 +93,18 @@ for(var i = 0; i < keys.length; i++) {
     }
 }
 
-var displayInfo= function(htmlElement, content){
-    var numberStr = content.toString();
-    var url = constructUrl();
-
-    function constructUrl(){
-        var urlBase = "http://numbersapi.com/";
-        for (var index in numberStr){
-            if(numberStr.hasOwnProperty(index) && numberStr[index] != ".")
-                urlBase += numberStr[index] + ",";
-        }
-        return urlBase.substr(0, urlBase.length - 1);
+var constructUrl = function(numberStr){
+    var urlBase = "http://numbersapi.com/";
+    for (var index in numberStr){
+        if(numberStr.hasOwnProperty(index) && numberStr[index] != ".")
+            urlBase += numberStr[index] + ",";
     }
+    return urlBase.substr(0, urlBase.length - 1);
+};
 
+var displayFromServer = function(htmlElement, content){
+    var numberStr = content.toString();
+    var url = constructUrl(numberStr);
     var request = new XMLHttpRequest();
     request.onreadystatechange = onReady;
     request.open('GET', url, true);
@@ -115,18 +115,39 @@ var displayInfo= function(htmlElement, content){
             var response = request.responseText;
 
             // if the number was more than one digit long, numbersAPI returns a JSON object which needs further editing
-            if (numberStr.length == 1)
+            if (numberStr.length == 1){
                 htmlElement.innerHTML = response;
+                storage.setItem(numberStr, response);
+            }
             else if (numberStr.length > 1){
                 var JSONinfos = JSON.parse(response);
                 var numberInfo = "";
                 for (var info in JSONinfos){
                     if (JSONinfos.hasOwnProperty(info)){
                         numberInfo += JSONinfos[info] + " ";
+                        storage.setItem(info, JSONinfos[info]);
                     }
                 }
                 htmlElement.innerHTML = numberInfo;
             }
         }
+    }
+};
+
+var displayInfo = function(htmlElement, content){
+    var numberStr = content.toString();
+    var needHttpRequest = false;
+    for (var i = 0; i < numberStr.length; i++){
+        if (storage.getItem(numberStr[i]) === null)
+            needHttpRequest = true;
+    }
+    if (needHttpRequest)
+        displayFromServer(htmlElement, content);
+    else {
+        var numberInfo = "";
+        for (var index in numberStr){
+            numberInfo += storage.getItem(numberStr[index]);
+        }
+        htmlElement.innerHTML = numberInfo;
     }
 };
